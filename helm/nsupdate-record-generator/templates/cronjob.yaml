@@ -1,0 +1,49 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: {{ include "nsupdate-record-generator.fullname" . }}
+  labels:
+    {{- include "nsupdate-record-generator.labels" . | nindent 4 }}
+spec:
+  schedule: {{ .Values.updateJob.schedule | quote }}
+  concurrencyPolicy: {{ .Values.updateJob.concurrencyPolicy }}
+  successfulJobsHistoryLimit: {{ .Values.updateJob.successfulJobsHistoryLimit }}
+  failedJobsHistoryLimit: {{ .Values.updateJob.failedJobsHistoryLimit }}
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          annotations:
+            sidecar.istio.io/inject: "false"
+        spec:
+          serviceAccountName: {{ include "nsupdate-record-generator.serviceAccountName" . }}
+          restartPolicy: {{ .Values.updateJob.restartPolicy }}
+          containers:
+            - name: {{ .Chart.Name }}
+              securityContext:
+                {{- toYaml .Values.securityContext | nindent 16 }}
+              image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+              imagePullPolicy: {{ .Values.image.pullPolicy }}
+              env:
+                - name: DEST_DNS_SERVER
+                  valueFrom:
+                    configMapKeyRef:
+                      name: nsupdate-record-generator-config
+                      key: destination_dns_server
+                {{- if .Values.tsigSealedSecrets }}
+                - name: TSIG_ALGORITHM
+                  valueFrom:
+                    secretKeyRef:
+                      name: nsupdate-tsig-key
+                      key:  algorithm
+                - name: TSIG_KEYNAME
+                  valueFrom:
+                    secretKeyRef:
+                      name: nsupdate-tsig-key
+                      key:  keyname
+                - name: TSIG_KEYVALUE
+                  valueFrom:
+                    secretKeyRef:
+                      name: nsupdate-tsig-key
+                      key:  secret
+                {{- end }}

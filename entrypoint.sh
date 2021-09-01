@@ -1,5 +1,7 @@
 #!/usr/bin/env sh
 
+set -e
+
 if [ "$1" = 'update-records' ]
 then
   # Sanity check, always need a DNS server defined.
@@ -11,6 +13,9 @@ then
 
   # First generate the nsupdate commands file.
   python3 generate-dns-records.py --dns_server "$DEST_DNS_SERVER"
+
+  # DEBUG
+  cat ./nsupdate-commands.txt
 
   # nsupdate commands file now exists at ./nsupdate-commands.txt. Run nsupdate (with TSIG if configured).
   if [ -n "$TSIG_ALGORITHM" ] && [ -n "$TSIG_KEYNAME" ] && [ -n "$TSIG_KEYVALUE" ]

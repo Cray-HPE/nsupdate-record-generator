@@ -1,5 +1,5 @@
 image:
-  repository: nginx
+  repository: cray/nsupdate-record-generator
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
   tag: ""
@@ -16,15 +16,25 @@ serviceAccount:
   # If not set and create is true, a name is generated using the fullname template
   name: ""
 
-podAnnotations: {}
-
-podSecurityContext: {}
-  # fsGroup: 2000
-
-securityContext: {}
+securityContext:
    capabilities:
      drop:
      - ALL
-   readOnlyRootFilesystem: true
+   readOnlyRootFilesystem: false
    runAsNonRoot: true
-   runAsUser: nobody
+   runAsUser: 65534
+
+updateJob:
+  schedule: "@hourly"
+  concurrencyPolicy: Replace
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  restartPolicy: Never
+
+# This MUST be set otherwise the deployment will fail. Should be the FQDN of the destination server.
+destinationDNSServer: ""
+
+# In order to enable TSIG a secret needs to be passed to this deployment containing the algorithm, key name, and key
+# value. This should be a Bitnami sealed secret which will automatically get mounted into the deployment if included,
+# otherwise if this list is empty TSIG options will not be passed to `nsupdate`.
+tsigSealedSecrets: []

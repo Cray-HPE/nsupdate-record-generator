@@ -51,26 +51,28 @@ parser.add_argument('--server_port', type=int, action="store", default=53,
 parser.add_argument('--output_file', type=str, action="store", default="./nsupdate-commands.txt",
                     help="File to output nsupdate commands to.")
 
-parser.add_argument('--base_api_address', type=str, action="store", default="https://api-gw-service-nmn.local/apis/sls",
+parser.add_argument('--base_api_address', type=str, action="store", default="http://cray-sls",
                     help="Base address for API gateway.")
 
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-token = os.environ.get('TOKEN')
-if token is None:
-    print("TOKEN can not be empty!")
-    exit(1)
-
 args = parser.parse_args()
 
 NAMESPACE = "services"
 
+token = None
 try:
     config.load_incluster_config()
 except config.ConfigException:
     try:
         config.load_kube_config()
+
+        # If we're running outside the cluster we need to have an exported TOKEN.
+        token = os.environ.get('TOKEN')
+        if token is None:
+            print("TOKEN can not be empty!")
+            exit(1)
     except config.ConfigException:
         raise Exception("Could not configure Kubernetes Python client!")
 
@@ -90,7 +92,9 @@ reverse_records = []
 # SLS
 ###
 url = "{}/v1/networks/CAN".format(args.base_api_address)
-headers = {"Authorization": "Bearer {}".format(token)}
+headers = None
+if token is not None:
+    headers = {"Authorization": "Bearer {}".format(token)}
 response = requests.get(url, headers=headers, verify=False).json()
 
 # Need to know what the supernet all the addresses should fit into.
