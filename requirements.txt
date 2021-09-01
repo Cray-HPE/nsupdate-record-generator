@@ -1,0 +1,4 @@
+requests~=2.26.0
+urllib3~=1.26.6
+PyYAML~=5.4.1
+kubernetes~=18.20.0
